@@ -4,18 +4,6 @@ import math
 
 BACKEND = 'xformers'
 import xformers.ops as xops
-# from . import DEBUG, BACKEND
-
-# if BACKEND == 'xformers':
-#     import xformers.ops as xops
-# elif BACKEND == 'flash_attn':
-#     import flash_attn
-# elif BACKEND == 'sdpa':
-#     from torch.nn.functional import scaled_dot_product_attention as sdpa
-# elif BACKEND == 'naive':
-#     pass
-# else:
-#     raise ValueError(f"Unknown attention backend: {BACKEND}")
 
 
 __all__ = [
@@ -114,29 +102,6 @@ def scaled_dot_product_attention(*args, **kwargs):
         elif num_all_args == 2:
             k, v = kv.unbind(dim=2)
         out = xops.memory_efficient_attention(q, k, v)
-    # elif BACKEND == 'flash_attn':
-    #     if num_all_args == 1:
-    #         out = flash_attn.flash_attn_qkvpacked_func(qkv)
-    #     elif num_all_args == 2:
-    #         out = flash_attn.flash_attn_kvpacked_func(q, kv)
-    #     elif num_all_args == 3:
-    #         out = flash_attn.flash_attn_func(q, k, v)
-    # elif BACKEND == 'sdpa':
-    #     if num_all_args == 1:
-    #         q, k, v = qkv.unbind(dim=2)
-    #     elif num_all_args == 2:
-    #         k, v = kv.unbind(dim=2)
-    #     q = q.permute(0, 2, 1, 3)   # [N, H, L, C]
-    #     k = k.permute(0, 2, 1, 3)   # [N, H, L, C]
-    #     v = v.permute(0, 2, 1, 3)   # [N, H, L, C]
-    #     out = sdpa(q, k, v)         # [N, H, L, C]
-    #     out = out.permute(0, 2, 1, 3)   # [N, L, H, C]
-    # elif BACKEND == 'naive':
-    #     if num_all_args == 1:
-    #         q, k, v = qkv.unbind(dim=2)
-    #     elif num_all_args == 2:
-    #         k, v = kv.unbind(dim=2)
-    #     out = _naive_sdpa(q, k, v)
     else:
         raise ValueError(f"Unknown attention module: {BACKEND}")
     

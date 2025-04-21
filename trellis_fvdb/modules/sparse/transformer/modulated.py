@@ -1,9 +1,8 @@
 from typing import *
 import torch
 import torch.nn as nn
-# from ..basic import SparseTensor
 from ..attention import SparseMultiHeadAttention, SerializeMode
-from ...norm import LayerNorm32, LayerNorm
+from ...norm import LayerNorm
 from .blocks import SparseFeedForwardNet
 
 import fvdb
@@ -33,10 +32,8 @@ class ModulatedSparseTransformerBlock(nn.Module):
         super().__init__()
         self.use_checkpoint = use_checkpoint
         self.share_mod = share_mod
-        # self.norm1 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
         self.norm1 = LayerNorm(channels, elementwise_affine=False, eps=1e-6)
         self.norm2 = LayerNorm(channels, elementwise_affine=False, eps=1e-6)
-        # self.norm2 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
         self.attn = SparseMultiHeadAttention(
             channels,
             num_heads=num_heads,
@@ -64,13 +61,11 @@ class ModulatedSparseTransformerBlock(nn.Module):
             shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = mod.chunk(6, dim=1)
         else:
             shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(mod).chunk(6, dim=1)
-        # h = x.replace(self.norm1(x.feats))
         h = self.norm1(x)
         h = h * (1 + scale_msa) + shift_msa
         h = self.attn(h)
         h = h * gate_msa
         x = x + h
-        # h = x.replace(self.norm2(x.feats))
         h = self.norm2(x)
         h = h * (1 + scale_mlp) + shift_mlp
         h = self.mlp(h)
@@ -111,9 +106,6 @@ class ModulatedSparseTransformerCrossBlock(nn.Module):
         super().__init__()
         self.use_checkpoint = use_checkpoint
         self.share_mod = share_mod
-        # self.norm1 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
-        # self.norm2 = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
-        # self.norm3 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
         self.norm1 = LayerNorm(channels, elementwise_affine=False, eps=1e-6)
         self.norm2 = LayerNorm(channels, elementwise_affine=True, eps=1e-6)
         self.norm3 = LayerNorm(channels, elementwise_affine=False, eps=1e-6)
@@ -163,11 +155,9 @@ class ModulatedSparseTransformerCrossBlock(nn.Module):
         h = self.self_attn(h)
         h = h * gate_msa[batch_idx]
         x = x + h
-        # h = x.replace(self.norm2(x.feats))
         h = self.norm2(x)
         h = self.cross_attn(h, context)
         x = x + h
-        # h = x.replace(self.norm3(x.feats))
         h = self.norm3(x)
         h = h * (1 + scale_mlp[batch_idx]) + shift_mlp[batch_idx]
         h = self.mlp(h)

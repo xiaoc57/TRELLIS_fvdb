@@ -23,16 +23,6 @@ class FlowEulerSampler(Sampler):
     ):
         self.sigma_min = sigma_min
 
-    # 我把两个没有使用的方法注释了
-    # def _eps_to_xstart(self, x_t: fvnn.VDBTensor, t, eps: fvnn.VDBTensor):
-    #     # assert x_t.shape == eps.shape
-    #     assert x_t.data.jdata.shape == eps.data.jdata.shape
-    #     return (x_t - (self.sigma_min + (1 - self.sigma_min) * t) * eps) / (1 - t)
-
-    # def _xstart_to_eps(self, x_t, t, x_0):
-    #     # assert x_t.shape == x_0.shape
-    #     return (x_t - (1 - t) * x_0) / (self.sigma_min + (1 - self.sigma_min) * t)
-
     def _v_to_xstart_eps(self, x_t: Union[fvnn.VDBTensor, torch.Tensor], t, v: Union[fvnn.VDBTensor, torch.Tensor]):
         # assert x_t.shape == v.shape
         if isinstance(x_t, torch.Tensor):
@@ -44,13 +34,11 @@ class FlowEulerSampler(Sampler):
         return x_0, eps
 
     def _inference_model(self, model, x_t: Union[fvnn.VDBTensor, torch.Tensor], t, cond=None, **kwargs):
-        # 这里需要改，因为x_t并没有shape
         if isinstance(x_t, torch.Tensor):
             ss = x_t.shape[0]
         else:
-            # ss = x_t.data.jdata.shape[0]
             ss = x_t.grid.grid_count
-        # 这里也就是说有多少个batch
+
         t = torch.tensor([1000 * t] * ss, device=x_t.device, dtype=torch.float32)
         if cond is not None and cond.shape[0] == 1 and ss > 1:
             cond = cond.repeat(ss, *([1] * (len(cond.shape) - 1)))
@@ -132,47 +120,6 @@ class FlowEulerSampler(Sampler):
             ret.pred_x_0.append(out.pred_x_0)
         ret.samples = sample
         return ret
-
-
-# 这里可以先注释，这个是训练过程中使用的
-# class FlowEulerCfgSampler(ClassifierFreeGuidanceSamplerMixin, FlowEulerSampler):
-#     """
-#     Generate samples from a flow-matching model using Euler sampling with classifier-free guidance.
-#     """
-#     @torch.no_grad()
-#     def sample(
-#         self,
-#         model,
-#         noise,
-#         cond,
-#         neg_cond,
-#         steps: int = 50,
-#         rescale_t: float = 1.0,
-#         cfg_strength: float = 3.0,
-#         verbose: bool = True,
-#         **kwargs
-#     ):
-#         """
-#         Generate samples from the model using Euler method.
-        
-#         Args:
-#             model: The model to sample from.
-#             noise: The initial noise tensor.
-#             cond: conditional information.
-#             neg_cond: negative conditional information.
-#             steps: The number of steps to sample.
-#             rescale_t: The rescale factor for t.
-#             cfg_strength: The strength of classifier-free guidance.
-#             verbose: If True, show a progress bar.
-#             **kwargs: Additional arguments for model_inference.
-
-#         Returns:
-#             a dict containing the following
-#             - 'samples': the model samples.
-#             - 'pred_x_t': a list of prediction of x_t.
-#             - 'pred_x_0': a list of prediction of x_0.
-#         """
-#         return super().sample(model, noise, cond, steps, rescale_t, verbose, neg_cond=neg_cond, cfg_strength=cfg_strength, **kwargs)
 
 
 class FlowEulerGuidanceIntervalSampler(GuidanceIntervalSamplerMixin, FlowEulerSampler):

@@ -1,0 +1,4 @@
+[submodule "openvdb"]
+	path = openvdb
+	url = https://github.com/xiaoc57/openvdb.git
+	branch = feature/fvdb

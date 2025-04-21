@@ -2,8 +2,6 @@ from typing import *
 import torch
 import torch.nn as nn
 from ...modules.utils import convert_module_to_f16
-# from ...modules import sparse as sp
-# from ...modules.transformer import AbsolutePositionEmbedder
 from ...modules.sparse.transformer import SparseTransformerBlock
 from ...modules.transformer import AbsolutePositionEmbedder
 
@@ -97,11 +95,11 @@ class SparseTransformerBase(nn.Module):
         """
         self.blocks.apply(convert_module_to_f16)
 
-    # def convert_to_fp32(self) -> None:
-    #     """
-    #     Convert the torso of the model to float32.
-    #     """
-    #     self.blocks.apply(convert_module_to_f32)
+    def convert_to_fp32(self) -> None:
+        """
+        Convert the torso of the model to float32.
+        """
+        self.blocks.apply(convert_module_to_f32)
 
     def initialize_weights(self) -> None:
         # Initialize transformer layers:
@@ -113,11 +111,7 @@ class SparseTransformerBase(nn.Module):
         self.apply(_basic_init)
 
     def forward(self, x: fvnn.VDBTensor) -> fvnn.VDBTensor:
-        
-        # w = torch.load("w.pt", weights_only=True)
-        # b = torch.load("b.pt", weights_only=True)
 
-        # tmp = x.data.jdata.cpu() @ w.T + b
         # atol=1e-4, rtol=1e-3
         h = self.input_layer(x)
 
@@ -126,30 +120,6 @@ class SparseTransformerBase(nn.Module):
             h = h + self.pos_embedder(h.grid.ijk.jdata.detach().clone())
         
         h = h.type(self.dtype)
-        
-
-        # import numpy as np
-
-        # feature = np.load("feature_0a6e1a80d2e34d5981d6b2b440bbc8cd.npz")
-        # latent_t = np.load("latent_0a6e1a80d2e34d5981d6b2b440bbc8cd.npz")
-        # latent_t = torch.from_numpy(latent_t['feats']).float().cuda()
-        
-        # ijks = torch.from_numpy(feature['indices']).int().cuda()
-
-        # i1 = self.pos_embedder(ijks)
-        # i2 = self.pos_embedder(h.grid.ijk.jdata[h.grid.ijk_to_index(ijks).jdata])
-
-        # t2 = i1 + h.data.jdata[h.grid.ijk_to_index(ijks).jdata]
-        # t2 = t2.to(self.dtype)
-        # h.data = h.grid.jagged_like(t2)
-
-        # if self.pe_mode == "ape":
-        #     inp = h.grid.jdata
-        #     k = self.pos_embedder(fvnn.VDBTensor())
-        #     # k = self.pos_embedder(h)
-        #     h = h + self.pos_embedder(h)
-        # h = h.type(self.dtype)
-
 
         for block in self.blocks:
             h = block(h)

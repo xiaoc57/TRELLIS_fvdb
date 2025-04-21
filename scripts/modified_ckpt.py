@@ -25,8 +25,8 @@ def modify_checkpoint(input_path: str, output_path: str):
     save_file(new_state_dict, output_path)
 
 if __name__ == "__main__":
-    input_path = "/home/jiangyun/documents/trellis_fvdb/ckpts/slat_flow_img_dit_L_64l8p2_fp16.safetensors"  # Replace with your input path
-    output_path = "/home/jiangyun/documents/trellis_fvdb/ckpts/slat_flow_img_dit_L_64l8p2_fp16_modified.safetensors"  # Replace with your output path
+    input_path = "ckpts/slat_flow_img_dit_L_64l8p2_fp16.safetensors"  # Replace with your input path
+    output_path = "ckpts/slat_flow_img_dit_L_64l8p2_fp16_modified.safetensors"  # Replace with your output path
     
     modify_checkpoint(input_path, output_path)
     print(f"Checkpoint modified and saved to {output_path}")

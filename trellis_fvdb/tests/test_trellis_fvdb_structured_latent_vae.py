@@ -38,11 +38,11 @@ if __name__ == "__main__":
     model_gs.load_state_dict(ckpt_gs)
     model_gs = model_gs.to("cuda")
 
-    feature = np.load("example_data/features/dinov2_vitl14_reg/000045aad61c956b45fc468b2b2ec954636e5f647f1c1995854d46ecaa525e10.npz")
+    # feature = np.load("assets/059a7936ed89419ba9eae3153753ae86.npz")
     # latent_t = np.load("example_data/latents/dinov2_vitl14_reg_slat_enc_swin8_B_64l8_fp16/000045aad61c956b45fc468b2b2ec954636e5f647f1c1995854d46ecaa525e10.npz")
     # latent_t = torch.from_numpy(latent_t['feats']).float().cuda()
     
-    feature = torch.load("/home/jiangyun/documents/trellis_fvdb/assets/0a0af057d1b8488c80b311cb196659d0.pkl")
+    feature = torch.load("assets/0a0af057d1b8488c80b311cb196659d0.pkl")
 
     ijks = feature['indices'].int().cuda()
     assert torch.all(ijks >= 0) and torch.all(ijks < 64), "Some vertices are out of bounds"
@@ -53,8 +53,7 @@ if __name__ == "__main__":
     # features = torch.from_numpy(feature['patchtokens']).float().cuda()
     features = feature["feature"].float().cuda()
     grid = fvdb.gridbatch_from_ijk(fvdb.JaggedTensor(ijks), voxel_sizes=vox_size)
-
-    # features = features[grid[0].ijk_to_inv_index(ijks).jdata]
+    features = features[grid[0].ijk_to_inv_index(ijks).jdata]
 
     f = fvdb.JaggedTensor(features)
 
@@ -80,8 +79,3 @@ if __name__ == "__main__":
 
     video = render_utils.render_video(outputs[0], bg_color=(1, 1, 1))['color']
     imageio.mimsave("sample_gs.mp4", video, fps=30)
-
-    # save_path = os.path.join("latent.npz")
-    # np.savez_compressed(save_path, **pack)
-
-    print()

@@ -20,106 +20,149 @@
 - **Flexible Editing**: It allows for easy editings of generated 3D assets, such as generating variants of the same object or local editing of the 3D asset.
 - **fvdb**: It provides faster startup and more straightforward sparse tensor operations. 
 
+## 😲 Disclaimer
+- I have implemented the complete inference process (image to 3D), with major modifications in the SLAT part. The global processing uses the VDBTensor wrapper from fvdb. However, the training process is not included, and I cannot guarantee that there are no bugs (the inference flow has been tested, and the visualization results are reliable).
+
+- In the inference process, attention is implemented using xformers instead of flash-attn.
+
+- The version of fvdb used here is not the original, as some necessary modifications have been made. For more details, please refer to the related [issue](https://github.com/AcademySoftwareFoundation/openvdb/issues/2030).
+
+- This library has not been rigorously tested for performance!
+
+- If you have any questions or concerns, please feel free to contact me or raise an issue.
+
 ## 📦 Installation
 
 ### Prerequisites
-- **System**: The code is currently tested only on **Linux**.
-- **Hardware**: An NVIDIA GPU with at least 16GB of memory is necessary. The code has been verified on NVIDIA A40 GPU.  
+- **System**: The code is currently tested only on **Linux**. **NOTE**: fvdb only support Linux.
+- **Hardware**: The code has been verified on NVIDIA A40 and A4500 GPUs.  
 - **Software**:   
-  - The [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit-archive) is needed to compile certain submodules. The code has been tested with CUDA versions 11.8 and 12.2.  
+  - The [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit-archive) is needed to compile certain submodules. The code has been tested with CUDA version 12.0. You can use the yaml file to create a new env.
   - [Conda](https://docs.anaconda.com/miniconda/install/#quick-command-line-install) is recommended for managing dependencies.  
   - Python version 3.8 or higher is required. 
+  - only [xformers](https://github.com/facebookresearch/xformers)
 
+### Installation Steps
+1. Clone the repo:
+    ```sh
+    git clone --recurse-submodules https://github.com/xiaoc57/TRELLIS_fvdb.git
+    cd TRELLIS_fvdb
+    ```
 
-# trellis_fvdb
-使用更高级的稀疏数据处理库fvdb实现了trellis的多个模型
+2. Install [fvdb](https://github.com/xiaoc57/openvdb/blob/feature/fvdb/fvdb/README.md#L75) and the dependencies:
 
-## 能够完成的任务
-稀疏结构使用的模型是不需要修改的，
-而将slat相关的数据结构由sparse Tensor修改成了FVDB中的VDBTensor
-
-# install
-
-```bash
-    install fvdb
-    install pointcept
-    install xformers
-    install flash-attn not
-    git submodule add https://github.com/AcademySoftwareFoundation/openvdb.git openvdb
-    git checkout feature/fvdb
-    git add .gitmodules openvdb
-    git commit -m "add openvdb" 
-
-    cd openvdb/fvdb
-    conda env create -f env/dev_environment.yml
+    **(Optional) Install libMamba for a huge quality of life improvement when using Conda**
+    ```
+    conda update -n base conda
+    conda install -n base conda-libmamba-solver
+    conda config --set solver libmamba
+    ```    
+    
+    Create a new conda environment named `fvdb` and install the dependencies:
+    ```sh
+    conda env create -f openvdb/fvdb/env/dev_environment.yml
     conda activate fvdb
+    ```
 
+    ### Install dependencies
 
-    pip install xformers==0.0.27.post2 --index-url https://download.pytorch.org/whl/cu121
-
-    export MAX_JOBS=$(free -g | awk '/^Mem:/{jobs=int($4/2.5); if(jobs<1) jobs=1; print jobs}')
-    python setup.py develop
-
-    cd ../../
+    ```sh
     pip install -r requirements.txt
-    git clone https://github.com/autonomousvision/mip-splatting.git /tmp/extensions/mip-splatting
+    # only xformers not support flash-attn
+    pip install xformers==0.0.27.post2 --index-url https://download.pytorch.org/whl/cu121
+    # for gaussian splatting render
+    git clone git@github.com:autonomousvision/mip-splatting.git /tmp/extensions/mip-splatting
     pip install /tmp/extensions/mip-splatting/submodules/diff-gaussian-rasterization/
 
-    export CUDA_VISIBLE_DEVICES=1
-
-    # install Pointcept
-    pip install Pointcept/
-    cd Pointcept/libs/pointops
-    python setup.py install
-    cd ../../../
-
     # reinstall !!!!!!!!!!!
-    pip install spconv-cu120
-    pip install torch-scatter -f https://data.pyg.org/whl/torch-2.4.0+cu121.html
-    pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.4.0+cu121.html
     pip install torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121
-    
-    python -m sp2sl.tests.test_trellis_fvdb_vae
+    ```
+
+    ### Building *f*VDB
+
+    **:warning: Note:** Compilation can be very memory-consuming. We recommend setting the `MAX_JOBS` environment variable to control compilation job parallelism with a value that allows for one job every 2.5GB of memory:
+
+    ```bash
+    cd openvdb/fvdb
+    export MAX_JOBS=$(free -g | awk '/^Mem:/{jobs=int($4/2.5); if(jobs<1) jobs=1; print jobs}')
+    ```
+
+    You could either perform an editable install with setuptools:
+    ```shell
+    python setup.py develop
+    ```
+    or install a 'read-only' copy to your site package folder:
+    ```shell
+    pip install .
+    ```
+    Then, you will success to install fvdb.
+    ```bash
+    cd ../../
+    ```
+
+    ### Download the ckpts
+    You should download these ckpts from [Hugging Face](https://huggingface.co/JeffreyXiang/TRELLIS-image-large/tree/main/ckpts)
+
+    ### modify the ckpt(slat_flow_img_dit_L_64l8p2_fp16.safetensors)
+    You should run this script to modify the weights' shape and copy ckpts/slat_flow_img_dit_L_64l8p2_fp16.json to ckpts/slat_flow_img_dit_L_64l8p2_fp16_modified.json.
+    You can also modify the origin files.
+    ```bash
+    python scripts/modified_ckpt.py
+    ```
+    <!-- ### Test your env
+
+    We support a file to verify the environment.
+
+    ```bash
+    python -m trellis_fvdb.tests.test_trellis_fvdb_structured_latent_vae
+    ``` -->
+
+<!-- Usage -->
+## 💡 Usage
+
+### Minimal Example
+
+Here is an [example](example.py) of how to use the pretrained models for 3D asset generation.
+```bash
+python example.py
 ```
 
-## fvdb的独特问题
-单一数据处理时因为dijk会有问题
-当ddp时因为TorchDeviceBuffer::create会有问题
-特征不对应问题
-如果是单一数据集需要jagged——like
-卷积weight的问题
+After running the code, you will get the following files:
+- `sample_gs.mp4`: a video showing the 3D Gaussian representation
+- `sample.ply`: a PLY file containing the 3D Gaussian representation
+
+<!-- Usage -->
+## 🆘 Unique Issues with fvdb
+- A single data must use jagged_like.
+- Problems with `TorchDeviceBuffer::create` during DDP. I made a small change in my fork of the fvdb library. (Like this [issue](https://github.com/AcademySoftwareFoundation/openvdb/issues/2030))
+- If your grid coordinates correspond one to one with features, you need to rearrange the features because the order of the ijks used to build the grid is different from the original ijks.
+    ```bash
+    features = feature["feature"].float().cuda()
+    grid = fvdb.gridbatch_from_ijk(fvdb.JaggedTensor(ijks), voxel_sizes=vox_size)
+    features = features[grid[0].ijk_to_inv_index(ijks).jdata]
+    ```
+- The convolution weights are in a different order. See `scripts/modified_ckpt.py`.
+
+<!-- License -->
+## ⚖️ License
+
+TRELLIS models and the majority of the code are licensed under the [MIT License](LICENSE). The following submodules may have different licenses:
+- [**diffoctreerast**](https://github.com/JeffreyXiang/diffoctreerast): We developed a CUDA-based real-time differentiable octree renderer for rendering radiance fields as part of this project. This renderer is derived from the [diff-gaussian-rasterization](https://github.com/graphdeco-inria/diff-gaussian-rasterization) project and is available under the [LICENSE](https://github.com/JeffreyXiang/diffoctreerast/blob/master/LICENSE).
 
 
-# TODO
-[x] valid step 
-test_step
-几个事情
-第一个事情就是对于obj数据集
-测试部分
-可变学习率？
-[x] 数据增强方法
-
-<!-- 多节点多卡 (不要想了，没有nvlink效率不高) -->
-
-shapenet方法，我有shapenetv1 高斯，物体，怎么训练这个？
-
-最后就是结构化的高斯能不能用于压缩方法。
+- [**Modified Flexicubes**](https://github.com/MaxtirError/FlexiCubes): In this project, we used a modified version of [Flexicubes](https://github.com/nv-tlabs/FlexiCubes) to support vertex attributes. This modified version is licensed under the [LICENSE](https://github.com/nv-tlabs/FlexiCubes/blob/main/LICENSE.txt).
 
 
-目前的问题，
+<!-- Citation -->
+## 📜 Citation
 
-- [x] 高斯太少，应该使用32
-- [x] 高斯范围太大，应该放到一个邻域内
-- [x] 是否使用球谐函数的高阶
-- [x] 优化了使用多少张图像的参数输入
-- [x] 是否直接使用ood数据
-位置要不要使用一个高频函数
+If you find this work helpful, please consider citing our paper:
 
- <!-- - x 数据集初始化 参数
- - x 数据集block 如何block
- - x 优化模型结构
- - x 模型加载检查点
- - x gs_decoder 冻结参数
- - grid 正则化方法
- - 检查grid与高斯的对应关系
- - 高斯分block的方法  --># TRELLIS_fvdb
+```bibtex
+@article{xiang2024structured,
+    title   = {Structured 3D Latents for Scalable and Versatile 3D Generation},
+    author  = {Xiang, Jianfeng and Lv, Zelong and Xu, Sicheng and Deng, Yu and Wang, Ruicheng and Zhang, Bowen and Chen, Dong and Tong, Xin and Yang, Jiaolong},
+    journal = {arXiv preprint arXiv:2412.01506},
+    year    = {2024}
+}
+```

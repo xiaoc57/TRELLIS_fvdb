@@ -1,7 +1,6 @@
 import torch.nn as nn
 import fvdb
 import fvdb.nn as fvnn
-# from ..modules import sparse as sp
 
 FP16_MODULES = (
     nn.Conv1d,
@@ -13,10 +12,6 @@ FP16_MODULES = (
     nn.Linear,
     fvnn.Linear,
     fvnn.SparseConv3d,
-
-    # sp.SparseConv3d,
-    # sp.SparseInverseConv3d,
-    # sp.SparseLinear,
 )
 
 def convert_module_to_f16(l):

@@ -38,7 +38,7 @@ if __name__ == "__main__":
     model_gs.load_state_dict(ckpt_gs)
     model_gs = model_gs.to("cuda")
 
-    feature = np.load("/home/jiangyun/documents/trellis_fvdb/assets/059a7936ed89419ba9eae3153753ae86_2.npz")
+    feature = np.load("assets/059a7936ed89419ba9eae3153753ae86_2.npz")
     # latent_t = np.load("example_data/latents/dinov2_vitl14_reg_slat_enc_swin8_B_64l8_fp16/000045aad61c956b45fc468b2b2ec954636e5f647f1c1995854d46ecaa525e10.npz")
     # latent_t = torch.from_numpy(latent_t['feats']).float().cuda()
     

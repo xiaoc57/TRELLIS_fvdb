@@ -38,14 +38,11 @@ class SparseResBlock3d(nn.Module):
             nn.SiLU(),
             nn.Linear(emb_channels, 2 * self.out_channels, bias=True),
         )
-        # BUG: no fvnn.Identity()
         self.skip_connection = fvnn.Linear(channels, self.out_channels) if channels != self.out_channels else nn.Identity()
         self.updown = None
         if self.downsample:
-            # self.updown = sp.SparseDownsample(2)
             self.updown = fvnn.AvgPool(2)
         elif self.upsample:
-            # self.updown = sp.SparseUpsample(2)
             self.updown = fvnn.UpsamplingNearest(2)
     
     # https://github.com/nv-tlabs/SCube/blob/main/scube/modules/diffusionmodules/openaimodel/unet_sparse_crossattn.py#L38
@@ -68,12 +65,9 @@ class SparseResBlock3d(nn.Module):
         h = self.norm1(x)
         h = fvnn.SiLU()(h)
         h = self.conv1(h)
-        # DEBUG:
         h = self.norm2(h) * (1 + scale[batch_idx]) + shift[batch_idx]
         h = fvnn.SiLU()(h)
         h = self.conv2(h)
-        
-        # h.data = h.data.jagged_like(torch.load("h1.pt"))
         h = h + self.skip_connection(x)
         return h
     
@@ -253,14 +247,12 @@ class SLatFlowModel(nn.Module):
         t_emb = t_emb.type(self.dtype)
         cond = cond.type(self.dtype)
 
-        # 需要获得拓扑结构
         skips = []
         # pack with input blocks
         for block in self.input_blocks:
             h = block(h, t_emb)
             skips.append(h)
         
-        # 这个中间的这个是扩散结构，不需要管拓扑
         if self.pe_mode == "ape":
             h = h + self.pos_embedder(h.grid.ijk.jdata.detach().clone()).type(self.dtype)
         for block in self.blocks:
@@ -273,17 +265,8 @@ class SLatFlowModel(nn.Module):
                 h = fvdb.jcat([h, skip], dim=1)
                 h = block(h, t_emb, skips[-1] if len(skips) > 0 else None)
             else:
-                raise NotImplementedError("还没有实现这个部分")
-            
-        # for idx, (block, skip) in enumerate(zip(self.out_blocks, reversed(skips))):
-        #     if self.use_skip_connection:
-        #         # h = block(h.replace(fvdb.cat([h.feats, skip], dim=1)), t_emb)
-        #         h = block(fvdb.jcat([h, skip], dim=1), t_emb, skip)
-        #     else:
-        #         raise NotImplementedError("还没有实现这个部分")
-                # h = block(h, t_emb)
+                raise NotImplementedError("")
 
-        # h = h.replace(F.layer_norm(h.feats, h.feats.shape[-1:]))
         h = fvnn.VDBTensor(h.grid, h.data.jagged_like(F.layer_norm(h.data.jdata.to(x.data.jdata.dtype), h.data.jdata.shape[-1:])), h.kmap)
         h = self.out_layer(h.type(x.dtype))
         return h

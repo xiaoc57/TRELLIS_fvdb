@@ -9,7 +9,6 @@ from PIL import Image
 import rembg
 from .base import Pipeline
 from . import samplers
-# from ..modules import sparse as sp
 
 import fvdb
 import fvdb.nn as fvnn
@@ -69,26 +68,11 @@ class TrellisImageTo3DPipeline(Pipeline):
 
         return new_pipeline
     
-    # def _init_image_cond_model(self, name: str):
-    #     """
-    #     Initialize the image conditioning model.
-    #     """
-    #     dinov2_model = torch.hub.load('facebookresearch/dinov2', name, pretrained=True)
-    #     dinov2_model.eval()
-    #     self.models['image_cond_model'] = dinov2_model
-    #     transform = transforms.Compose([
-    #         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    #     ])
-    #     self.image_cond_model_transform = transform
-
     def _init_image_cond_model(self, name: str):
         """
         Initialize the image conditioning model.
         """
-        # dinov2_model = torch.hub.load('facebookresearch/dinov2', name, pretrained=True)
-        dinov2_model = torch.hub.load('dinov2', 'dinov2_vitl14_reg', source='local', pretrained=False)
-        dinov2_model.load_state_dict(torch.load('dinov2_vitl14_reg4_pretrain.pth'))
-        
+        dinov2_model = torch.hub.load('facebookresearch/dinov2', name, pretrained=True)
         dinov2_model.eval()
         self.models['image_cond_model'] = dinov2_model
         transform = transforms.Compose([
@@ -250,18 +234,12 @@ class TrellisImageTo3DPipeline(Pipeline):
         """
         # Sample structured latent
         flow_model = self.models['slat_flow_model']
-        # noise = sp.SparseTensor(
-        #     feats=torch.randn(coords.shape[0], flow_model.in_channels).to(self.device),
-        #     coords=coords,
-        # )
+        
         # modify noise as vdbTensor
         # Fixed
         vox_size = 1 / 64
         vox_origin = (-0.5 + (vox_size / 2), -0.5 + (vox_size / 2), -0.5 + (vox_size / 2))
         grid = fvdb.gridbatch_from_ijk(coords[:, 1:], voxel_sizes=vox_size, origins=vox_origin)
-
-        # nn = torch.load("noise.pt")
-        # noise = fvnn.VDBTensor(grid, grid.ijk.jagged_like(nn))
         noise = fvnn.VDBTensor(grid, grid.ijk.jagged_like(torch.randn(coords.shape[0], flow_model.in_channels).to(self.device)))
 
         sampler_params = {**self.slat_sampler_params, **sampler_params}
@@ -307,7 +285,6 @@ class TrellisImageTo3DPipeline(Pipeline):
         cond = self.get_cond([image])
         torch.manual_seed(seed)
         coords = self.sample_sparse_structure(cond, num_samples, sparse_structure_sampler_params)
-        # coords = torch.load("coords.pt")
         slat = self.sample_slat(cond, coords, slat_sampler_params)
         return self.decode_slat(slat, formats)
 

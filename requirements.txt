@@ -1,4 +1,3 @@
-lightning
 einops
 pillow
 imageio

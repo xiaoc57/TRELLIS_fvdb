@@ -58,34 +58,3 @@ def sparse_scaled_dot_product_attention(*args):
         out = xops.memory_efficient_attention(q_data, k, v, mask)[0]
 
         return fvnn.VDBTensor(q.grid, q.data.jagged_like(out))
-
-
-
-# def sparse_scaled_dot_product_attention(qkv: fvnn.VDBTensor):
-#     # qkv
-    
-#     device = qkv.device
-
-#     # s
-#     #     num_batches = input.grid.grid_count
-
-#     # flat_data, flat_offsets = input.data.jdata, input.data.joffsets
-
-#     # result_data = torch.empty_like(flat_data)
-
-#     # for b in range(num_batches):
-#     #     feat = flat_data[flat_offsets[0 + b]:flat_offsets[1 + b]]
-#     s = qkv
-#     q_seqlen = [qkv.data.joffsets[1 + b] for b in range(qkv.grid.grid_count)]
-#     kv_seqlen = q_seqlen
-#     qkv_data = qkv.data.jdata
-
-#     q, k, v = qkv_data.unbind(dim=1)
-
-#     q = q.unsqueeze(0)
-#     k = k.unsqueeze(0)
-#     v = v.unsqueeze(0)
-#     mask = xops.fmha.BlockDiagonalMask.from_seqlens(q_seqlen, kv_seqlen)
-#     out = xops.memory_efficient_attention(q, k, v, mask)[0]
-
-#     return fvnn.VDBTensor(qkv.grid, qkv.data.jagged_like(out))

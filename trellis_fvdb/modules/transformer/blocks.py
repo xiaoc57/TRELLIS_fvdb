@@ -1,8 +1,6 @@
 from typing import *
 import torch
 import torch.nn as nn
-# from ..attention import MultiHeadAttention
-# from ..norm import LayerNorm32
 
 import fvdb
 import fvdb.nn as fvnn
@@ -47,20 +45,6 @@ class AbsolutePositionEmbedder(nn.Module):
         if embed.shape[1] < self.channels:
             embed = torch.cat([embed, torch.zeros(N, self.channels - embed.shape[1], device=embed.device)], dim=-1)
         return embed
-    
-    # def forward(self, input: fvnn.VDBTensor):
-
-    #     x = input.grid.ijk.jdata.detach().clone()
-    #     N, D = x.shape
-    #     assert D == self.in_channels, "Input dimension must match number of input channels"
-    #     embed = self._sin_cos_embedding(x.reshape(-1))
-    #     embed = embed.reshape(N, -1)
-    #     if embed.shape[1] < self.channels:
-    #         embed = torch.cat([embed, torch.zeros(N, self.channels - embed.shape[1], device=embed.device)], dim=-1)
-
-    #     # return fvnn.VDBTensor(input.grid, input.grid.jagged_like(embed + input.data.jdata))
-    #     return embed
-
 
 class FeedForwardNet(nn.Module):
     def __init__(self, channels: int, mlp_ratio: float = 4.0):
